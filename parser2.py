@@ -30,8 +30,9 @@ def write_to_csv(counter):
         writer = csv.writer(csvfile)
         header = ['IP', 'Count']
         writer.writerow(header)
-        for item in counter:
-            writer.writerow((item, counter[item]))
+        sorted_ips = sorted(counter.items(), key=lambda x: x[1], reverse=True)
+        for item in sorted_ips:
+            writer.writerow((item[0], item[1]))
 
 def print_sorted_ips(counter):
     sorted_ips = sorted(counter.items(), key=lambda x: x[1], reverse=True)
