@@ -1,0 +1,105 @@
+import paramiko
+import getpass
+import time
+import datetime
+
+def ssh_cisco_router(ip, username, password, enable_password):
+    try:
+        # Establish SSH connection
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(ip, username=username, password=password, look_for_keys=False, allow_agent=False)
+        
+        print(f"Successfully connected to {ip}")
+        
+        # Enter enable mode if needed
+        shell = ssh.invoke_shell()
+        shell.settimeout(5)  # Set timeout for operations
+        
+        # Wait for initial prompt
+        time.sleep(1)
+        output = receive_output(shell)
+        
+        # Enter enable mode
+        shell.send("enable\n")
+        time.sleep(1)
+        output += receive_output(shell)
+        
+        # Send enable password
+        shell.send(enable_password + "\n")
+        time.sleep(1)
+        output += receive_output(shell)
+        
+        # Disable pagination
+        shell.send("terminal length 0\n")
+        time.sleep(1)
+        output += receive_output(shell)
+        
+        # Send commands and collect output
+        commands = [
+            "show ip interface brief",
+            "show sdwan bfd sessions"
+        ]
+        
+        for command in commands:
+            print(f"Executing command: {command}")
+            shell.send(command + "\n")
+            time.sleep(3)  # Give more time for command execution
+            output += receive_output(shell)
+        
+        # Exit the session cleanly
+        shell.send("exit\n")
+        time.sleep(1)
+        output += receive_output(shell)
+        
+        # Save output to a file named after the IP address with timestamp
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{ip}_output_{timestamp}.txt"
+        with open(filename, "w") as file:
+            file.write(output)
+        
+        print(f"Output successfully saved to {filename}")
+
+        # Close SSH session
+        ssh.close()
+        print("SSH session closed")
+        return True
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return False
+
+def receive_output(shell):
+    """Helper function to receive and return all available output"""
+    output = ""
+    # Give the device time to send all data
+    time.sleep(1)
+    
+    # Keep receiving data until there's nothing left
+    while True:
+        if shell.recv_ready():
+            chunk = shell.recv(65535).decode("utf-8", errors="ignore")
+            output += chunk
+            # If we got data, there might be more, so small pause
+            time.sleep(0.5)
+        else:
+            # No more data available right now
+            break
+    
+    return output
+
+if __name__ == "__main__":
+    print("Cisco Router SSH Connection Tool")
+    print("================================")
+    ip = input("Enter the Cisco Router IP: ")
+    username = input("Enter SSH Username: ")
+    password = getpass.getpass("Enter SSH Password: ")
+    enable_password = getpass.getpass("Enter Enable Password: ")
+    
+    # Call the function with user inputs
+    success = ssh_cisco_router(ip, username, password, enable_password)
+    
+    if success:
+        print("Script completed successfully.")
+    else:
+        print("Script encountered errors. Please check the output above.")
