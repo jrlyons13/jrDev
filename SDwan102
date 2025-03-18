@@ -57,10 +57,39 @@ def ssh_cisco_router(ip, username, password, enable_password):
         output += receive_output(shell)
         
         # Sanitize output by replacing any instances of the enable password with XXXXX
-        if enable_password:
-            sanitized_output = output.replace(enable_password, "XXXXX")
-        else:
-            sanitized_output = output
+        # Also sanitize common patterns where passwords might appear
+        sanitized_output = output
+        
+        # Handle the actual password
+        if enable_password and enable_password.strip():
+            sanitized_output = sanitized_output.replace(enable_password, "XXXXX")
+            
+            # Handle case where password might appear after "Password: " prompt
+            # Look for patterns like "Password: actual_password" or "password actual_password"
+            password_patterns = [
+                f"Password: {enable_password}",
+                f"password {enable_password}",
+                f"Password:{enable_password}",
+                f"password:{enable_password}"
+            ]
+            
+            for pattern in password_patterns:
+                # Replace with "Password: XXXXX" or similar
+                replacement = pattern.replace(enable_password, "XXXXX")
+                sanitized_output = sanitized_output.replace(pattern, replacement)
+            
+            # Handle partial line display of passwords
+            lines = sanitized_output.split('\n')
+            for i, line in enumerate(lines):
+                # Look for lines containing just the password
+                if enable_password in line:
+                    lines[i] = line.replace(enable_password, "XXXXX")
+            
+            sanitized_output = '\n'.join(lines)
+        
+        # Also sanitize the regular SSH password
+        if password and password.strip():
+            sanitized_output = sanitized_output.replace(password, "XXXXX")
             
         # Save sanitized output to a file named after the IP address with timestamp
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
