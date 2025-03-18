@@ -4,6 +4,10 @@ import time
 import datetime
 
 def ssh_cisco_router(ip, username, password, enable_password):
+    """
+    Connect to a Cisco router via SSH, execute commands, and save the output.
+    The function sanitizes the output to remove sensitive information like passwords.
+    """
     try:
         # Establish SSH connection
         ssh = paramiko.SSHClient()
@@ -38,8 +42,7 @@ def ssh_cisco_router(ip, username, password, enable_password):
         # Send commands and collect output
         commands = [
             "show ip interface brief",
-            "show sdwan bfd sessions",
-            "show vrrp brief"
+            "show sdwan bfd sessions"
         ]
         
         for command in commands:
@@ -53,11 +56,17 @@ def ssh_cisco_router(ip, username, password, enable_password):
         time.sleep(1)
         output += receive_output(shell)
         
-        # Save output to a file named after the IP address with timestamp
+        # Sanitize output by replacing any instances of the enable password with XXXXX
+        if enable_password:
+            sanitized_output = output.replace(enable_password, "XXXXX")
+        else:
+            sanitized_output = output
+            
+        # Save sanitized output to a file named after the IP address with timestamp
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{ip}_output_{timestamp}.txt"
         with open(filename, "w") as file:
-            file.write(output)
+            file.write(sanitized_output)
         
         print(f"Output successfully saved to {filename}")
 
@@ -91,6 +100,8 @@ def receive_output(shell):
 
 if __name__ == "__main__":
     print("Cisco Router SSH Connection Tool")
+    print("================================")
+    print("Note: For security, passwords will be redacted in the output file")
     print("================================")
     ip = input("Enter the Cisco Router IP: ")
     username = input("Enter SSH Username: ")
