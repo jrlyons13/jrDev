@@ -38,7 +38,8 @@ def ssh_cisco_router(ip, username, password, enable_password):
         # Send commands and collect output
         commands = [
             "show ip interface brief",
-            "show sdwan bfd sessions"
+            "show sdwan bfd sessions",
+            "show vrrp brief"
         ]
         
         for command in commands:
